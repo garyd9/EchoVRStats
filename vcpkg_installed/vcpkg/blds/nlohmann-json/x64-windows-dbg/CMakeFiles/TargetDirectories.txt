@@ -1,0 +1,7 @@
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/package.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/package_source.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/edit_cache.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/rebuild_cache.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/list_install_components.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/install.dir
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/nlohmann-json/x64-windows-dbg/CMakeFiles/install/local.dir

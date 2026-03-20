@@ -1,0 +1,4 @@
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/pkgs/zlib_x64-windows/lib/zlib.lib
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/pkgs/zlib_x64-windows/bin/zlib1.dll
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/pkgs/zlib_x64-windows/include/zconf.h
+C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/pkgs/zlib_x64-windows/include/zlib.h

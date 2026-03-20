@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/curl/x64-windows-rel/cmake_install.cmake",
+		"C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/curl/x64-windows-rel/scripts/cmake_install.cmake",
+		"C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/curl/x64-windows-rel/lib/cmake_install.cmake",
+		"C:/Users/garyd/source/repos/EchoVRStats/vcpkg_installed/vcpkg/blds/curl/x64-windows-rel/docs/examples/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
