@@ -138,108 +138,6 @@ EchoSessionData ReadResponse2(std::string strSource)
     return sess;
 }
 
-#if (INFLUXDB)
-
-void InfluxLoop(std::list<std::string>& sources, std::string strDestination)
-{
-    while (1)
-    {
-        RunCycle(sources, strDestination);
-        Sleep(10000);
-    }
-
-}
-
-void writeInflux(const std::string& influxUrl, const std::string& lineProtocol)
-{
-    CURL* curl = curl_easy_init();
-
-    if (curl)
-    {
-        curl_easy_setopt(curl, CURLOPT_URL, influxUrl.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, lineProtocol.c_str());
-
-        struct curl_slist* headers = NULL;
-        headers = curl_slist_append(headers, "Content-Type: text/plain");
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-        CURLcode res = curl_easy_perform(curl);
-
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-
-        if (res != CURLE_OK)
-            throw std::runtime_error("InfluxDB write failed");
-    }
-}
-
-void FetchSessionData(std::list<std::string>& dataSources, std::list<EchoSessionData>& sessionData)
-{
-    sessionData.clear();
-
-    for (auto src : dataSources)
-    {
-        EchoSessionData sess;
-        ReadResponse(src, sess);
-//        TODO: deal with session types of ERR and UNKNOWN
-        if (sess.m_SessionType != sess.IDLE)
-            sessionData.push_back(sess);
-    }
-}
-
-void RunCycle(std::list<std::string>& dataSources, std::string strInfluxDest = {})
-{
-    std::list<EchoSessionData> sessions;
-    FetchSessionData(dataSources, sessions);
-
-    // all the data is retrieved.  now do something with it!
-    std::string  outputLines;
-
-    for (auto sess : sessions)
-    {
-        if (sess.m_Players.size())
-        {
-            for (auto p : sess.m_Players)
-            {
-                outputLines.append(
-                    "TEST_DATA,sessionid=" + sess.m_strSessionID +
-                    ",matchtype=" + ((sess.m_SessionType == sess.ECHO_COMBAT) ? "Echo\\ Combat" : "Echo\\ Arena") +
-                    ",isprivate=" + (sess.m_bIsPrivate ? "true" : "false") +
-                    ",userid=" + std::to_string(p.m_llUserId) +
-                    ",playername=" + p.GetPlayerNameEscaped() +
-                    // 
-                    " packetlossratio=" + std::to_string(p.m_dPacketLossRatio) +
-                    ",ping=" + std::to_string(p.m_nPing) +
-                    " " + std::to_string(sess.m_nTimestamp) +
-                    "\n");
-
-//                TODO:  add the m_strSource.  That will be either "file" or a server port number
-            }
-        }
-        else if (sess.m_SessionType == sess.LOBBY)
-        {
-            // eventually this will be something like: 
-            //  echovr_session,matchtype=Social\ Lobby playercount=5 timestamp
-            cout << "lobby\n";
-        }
-    } // foreach(sessions)
-
-    if (!outputLines.empty())
-    {
-        if (!strInfluxDest.empty())
-        {
-            writeInflux(strInfluxDest, outputLines);
-            cout << ".";
-        }
-        else
-        {
-            cout << outputLines;
-        }
-    }
-
-}
-
-#else
 
 /*
 For prometheus:
@@ -333,6 +231,8 @@ public:
                 break;
             } // switch
         }  // for each sessions     
+        // call the parent's serialize
+        Registry::serialize(out);
     }
 };
 
@@ -353,7 +253,7 @@ void SpinUpPrometheusListener(std::string strIPSpecToListenOn, std::list<std::st
         std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-#endif
+
 
 int main(int argc, char **argv)
 {
@@ -362,9 +262,6 @@ int main(int argc, char **argv)
     opts.add_options()
         ( "p,port", "EchoVR.exe API port to poll. Use multiple times for multiple servers", cxxopts::value<std::vector<unsigned>>())
         ( "f,file", "File that contains API /session data. Used for debugging, usually in place of a port. Use multiple times for multiple files.", cxxopts::value<std::vector<std::string>>())
-#if (INFLUXDB)
-        ("i,influx", "Full URL to write influx data to.  ie: http://influxdb.mydomain.org:8086/write", cxxopts::value<std::string>())
-#endif
         ("l,listen", "prometheus compatible IP spec to listen on.  ie: 0.0.0.0:9100", cxxopts::value<std::string>()->default_value("0.0.0.0:9100"))
         ;
 
@@ -386,22 +283,13 @@ int main(int argc, char **argv)
             {
                 sources.emplace_back(file);
             }
-#if (INFLUXDB)
-        std::string strInfluxURL{};
-        if (paramResult["influx"].count())
-            strInfluxURL = paramResult["influx"].as<std::string>();
-        else
-            bNeedsHelp = true;
-#endif
         if (!sources.size() || bNeedsHelp)
         {
             cout << opts.help() << endl;
         }
         else
         {
-#if !(INFLUXDB)
             cout << "Will listen on http://" << paramResult["listen"].as<std::string>() << "/metrics and poll servers in response.\n";
-#endif
             cout << "Polling servers at:\n";
             for (auto s : sources)
                 cout << "\t" << s << endl;
@@ -411,10 +299,6 @@ int main(int argc, char **argv)
             curl_global_init(CURL_GLOBAL_DEFAULT);
 
             SpinUpPrometheusListener(paramResult["listen"].as<std::string>(), sources);
-#if 0
-
-            InfluxLoop(strInfluxURL);
-#endif
             curl_global_cleanup();
         }
     }

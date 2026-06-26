@@ -33,13 +33,13 @@ public:
             case '\n':
                 str += "\\n";
                 break;
-            case ' ':
-            case ',':
-            case '=':
-                // InfluxDB line protocol field/tag escaping
-                str += '\\';
-                str += c;
-                break;
+            //case ' ':
+            //case ',':
+            //case '=':
+            //    // InfluxDB line protocol field/tag escaping
+            //    str += '\\';
+            //    str += c;
+            //    break;
             default:
                 str += c;
                 break;
