@@ -36,10 +36,12 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::stri
 // used by ReadResponse
 int httpGet(const std::string& url, std::string& strResponse)
 {
-    static thread_local CURL* s_curl = curl_easy_init();
+    static thread_local CURL* s_curl = nullptr;        
     long nStatusCode = 0;
-
-
+    if (!s_curl)
+    {
+        s_curl = curl_easy_init();
+    }
     strResponse.clear();
 
     if (s_curl)
@@ -53,6 +55,7 @@ int httpGet(const std::string& url, std::string& strResponse)
         if (res != CURLE_OK)
         {
             curl_easy_cleanup(s_curl);
+            s_curl = nullptr;
             throw std::runtime_error("HTTP GET failed with error " + std::to_string((int)res));
         }
         curl_easy_getinfo(s_curl, CURLINFO_RESPONSE_CODE, &nStatusCode);
@@ -61,8 +64,7 @@ int httpGet(const std::string& url, std::string& strResponse)
     {
         throw std::runtime_error("Unable to initialize curl");
     }
-    return nStatusCode;
-    
+    return nStatusCode;    
 }
 
 // parses the source string, reads the data, and parses the data into an EchoSessionData object
@@ -158,47 +160,53 @@ public:
         m_strPacketLossLabel = METRIC_PREFIX"PacketLossRatio";
     }
 
+    //virtual void serialize(std::ostream& out) override
+    //{
+    //    using namespace prometheus;
+    //    // there's no way to know what metrics might be used each iteration, so clear them all out
+    //    this->RemoveAll();
+
     virtual void serialize(std::ostream& out) override
     {
         using namespace prometheus;
-        // there's no way to know what metrics might be used each iteration, so clear them all out
         this->RemoveAll();
 
         std::vector<EchoSessionData> sessions;
         std::vector<std::future<EchoSessionData>> futures;
 
-        // for each data source...
         for (auto src : m_dataSources)
         {
-            // spawn a thread for each data source to capture it's own session data
-            //  (don't like returning the EchoSessionData via copy, but that's a tradeoff of shoving it in a thread safely)
             futures.push_back(std::async(std::launch::async, ReadResponse2, src));
         }
-        // wait until all the sessions are read before populating any metrics. This ensures things stay in
-        // order (if that matters)
-        
         for (auto& f : futures)
             sessions.push_back(f.get());
         futures.clear();
 
-        for (auto &sess : sessions)
+        // Formatted status display — overwrite previous output in place
+        static int s_lastLineCount = 0;
+        if (s_lastLineCount > 0)
+            cout << "\033[" << (s_lastLineCount) << "A";  // move cursor up
+        
+
+        auto local_now = std::chrono::current_zone()->to_local(std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
+        //std::cout << std::format("Current UTC time: {:%Y-%m-%d %H:%M:%S}\n", local_now);
+
+
+        cout << "\r\033[KLast Update: " << std::format("{:%H:%M:%S}", local_now) << "\n\n";
+
+        for (auto& sess : sessions)
         {
-            switch (sess.m_SessionType)
+            cout << "\r\033[KPort " << sess.m_strSource << ": " << sess.GetStatusString() << "\n";
+        }
+        s_lastLineCount = 2 + (int)sessions.size();
+        cout << flush;
+
+        // Create Prometheus metrics for active game sessions
+        for (auto& sess : sessions)
+        {
+            if (sess.m_SessionType == EchoSessionData::ECHO_COMBAT ||
+                sess.m_SessionType == EchoSessionData::ECHO_ARENA)
             {
-            case EchoSessionData::UNKNOWN:
-                cout << "?";
-                break;
-            case EchoSessionData::ERR:
-                cout << "E";
-                break;
-            case EchoSessionData::IDLE:
-                // cout << "."; nop
-                break;
-            case EchoSessionData::LOBBY:
-                cout << "L";
-                break;
-            case EchoSessionData::ECHO_COMBAT:
-            case EchoSessionData::ECHO_ARENA:
                 for (auto p : sess.m_Players)
                 {
                     gauge_metric_t b_gauge(*this, m_strPingLabel, "ping rate, in milliseconds, reported by the echovr app",
@@ -223,18 +231,84 @@ public:
                         });
                     c_gauge.Set(p.m_dPacketLossRatio);
                 }
-                cout << (char)((sess.m_SessionType == sess.ECHO_COMBAT) ? 'C' : 'A');
+            }
+        }
 
-                break;
-            default:
-                cout << "?";
-                break;
-            } // switch
-        }  // for each sessions     
-        // call the parent's serialize
         Registry::serialize(out);
     }
+
+    //    std::vector<EchoSessionData> sessions;
+    //    std::vector<std::future<EchoSessionData>> futures;
+
+    //    // for each data source...
+    //    for (auto src : m_dataSources)
+    //    {
+    //        // spawn a thread for each data source to capture it's own session data
+    //        //  (don't like returning the EchoSessionData via copy, but that's a tradeoff of shoving it in a thread safely)
+    //        futures.push_back(std::async(std::launch::async, ReadResponse2, src));
+    //    }
+    //    // wait until all the sessions are read before populating any metrics. This ensures things stay in
+    //    // order (if that matters)
+    //    
+    //    for (auto& f : futures)
+    //        sessions.push_back(f.get());
+    //    futures.clear();
+
+    //    for (auto &sess : sessions)
+    //    {
+    //        switch (sess.m_SessionType)
+    //        {
+    //        case EchoSessionData::UNKNOWN:
+    //            cout << "?";
+    //            break;
+    //        case EchoSessionData::ERR:
+    //            cout << "E";
+    //            break;
+    //        case EchoSessionData::IDLE:
+    //            // cout << "."; nop
+    //            break;
+    //        case EchoSessionData::LOBBY:
+    //            cout << "L";
+    //            break;
+    //        case EchoSessionData::ECHO_COMBAT:
+    //        case EchoSessionData::ECHO_ARENA:
+    //            for (auto p : sess.m_Players)
+    //            {
+    //                gauge_metric_t b_gauge(*this, m_strPingLabel, "ping rate, in milliseconds, reported by the echovr app",
+    //                    {
+    //                        {"matchtype", ((sess.m_SessionType == sess.ECHO_COMBAT) ? "Echo Combat" : "Echo Arena")},
+    //                        {"sessionid", sess.m_strSessionID },
+    //                        {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
+    //                        {"userid", std::to_string(p.m_llUserId)},
+    //                        {"playername", p.GetPlayerNameEscaped()},
+    //                        {"server", sess.m_strSource }
+    //                    });
+    //                b_gauge.Set(p.m_nPing);
+
+    //                gauge_t<double&> c_gauge(*this, m_strPacketLossLabel, "packet loss ratio reported by the echovr app",
+    //                    {
+    //                        {"matchtype", ((sess.m_SessionType == sess.ECHO_COMBAT) ? "Echo Combat" : "Echo Arena")},
+    //                        {"sessionid", sess.m_strSessionID },
+    //                        {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
+    //                        {"userid", std::to_string(p.m_llUserId)},
+    //                        {"playername", p.GetPlayerNameEscaped()},
+    //                        {"server", sess.m_strSource }
+    //                    });
+    //                c_gauge.Set(p.m_dPacketLossRatio);
+    //            }
+    //            cout << (char)((sess.m_SessionType == sess.ECHO_COMBAT) ? 'C' : 'A');
+
+    //            break;
+    //        default:
+    //            cout << "?";
+    //            break;
+    //        } // switch
+    //    }  // for each sessions     
+    //    // call the parent's serialize
+    //    Registry::serialize(out);
+    //}
 };
+// Enable ANSI escape codes on Windows console
 
 void SpinUpPrometheusListener(std::string strIPSpecToListenOn, std::list<std::string>& sources)
 {
@@ -269,8 +343,6 @@ int main(int argc, char **argv)
     {
         auto paramResult = opts.parse(argc, argv);
 
-        bool bNeedsHelp = false;
-
         std::list<std::string> sources;
         if (paramResult["port"].count())
             for (auto port : paramResult["port"].as<std::vector<unsigned>>())
@@ -283,7 +355,7 @@ int main(int argc, char **argv)
             {
                 sources.emplace_back(file);
             }
-        if (!sources.size() || bNeedsHelp)
+        if (!sources.size())
         {
             cout << opts.help() << endl;
         }
@@ -293,11 +365,17 @@ int main(int argc, char **argv)
             cout << "Polling servers at:\n";
             for (auto s : sources)
                 cout << "\t" << s << endl;
-
-            cout <<  "\nStatus indicators:\n\tA - Arena Game\n\tC - Combat Game\n\tL - Lobby\n\tE - Error (AKA sprockee's fault)\n\t? - Unknown\n\t    Idle servers won't show status\n\n";
+            cout << endl;
 
             curl_global_init(CURL_GLOBAL_DEFAULT);
-
+#ifdef _WIN32
+            {
+                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                DWORD mode = 0;
+                if (GetConsoleMode(hOut, &mode))
+                    SetConsoleMode(hOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+            }
+#endif
             SpinUpPrometheusListener(paramResult["listen"].as<std::string>(), sources);
             curl_global_cleanup();
         }

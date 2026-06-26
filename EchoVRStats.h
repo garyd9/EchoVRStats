@@ -87,7 +87,18 @@ public:
         m_nTimestamp = epoch_milliseconds.time_since_epoch().count();
         m_nTimestamp *= 1000000;
     };
-
+    const char* GetStatusString() const
+    {
+        switch (m_SessionType)
+        {
+        case ECHO_ARENA:  return "Arena";
+        case ECHO_COMBAT: return "Combat";
+        case LOBBY:       return "Lobby";
+        case IDLE:        return "Idle";
+        case ERR:         return "Error";
+        default:          return "Unknown";
+        }
+    }
 	std::list<EchoPlayerData> m_Players;
 
     EchoSessionData()
