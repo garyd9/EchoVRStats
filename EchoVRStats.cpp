@@ -187,10 +187,7 @@ public:
         if (s_lastLineCount > 0)
             cout << "\033[" << (s_lastLineCount) << "A";  // move cursor up
         
-
         auto local_now = std::chrono::current_zone()->to_local(std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
-        //std::cout << std::format("Current UTC time: {:%Y-%m-%d %H:%M:%S}\n", local_now);
-
 
         cout << "\r\033[KLast Update: " << std::format("{:%H:%M:%S}", local_now) << "\n\n";
 
@@ -236,77 +233,6 @@ public:
 
         Registry::serialize(out);
     }
-
-    //    std::vector<EchoSessionData> sessions;
-    //    std::vector<std::future<EchoSessionData>> futures;
-
-    //    // for each data source...
-    //    for (auto src : m_dataSources)
-    //    {
-    //        // spawn a thread for each data source to capture it's own session data
-    //        //  (don't like returning the EchoSessionData via copy, but that's a tradeoff of shoving it in a thread safely)
-    //        futures.push_back(std::async(std::launch::async, ReadResponse2, src));
-    //    }
-    //    // wait until all the sessions are read before populating any metrics. This ensures things stay in
-    //    // order (if that matters)
-    //    
-    //    for (auto& f : futures)
-    //        sessions.push_back(f.get());
-    //    futures.clear();
-
-    //    for (auto &sess : sessions)
-    //    {
-    //        switch (sess.m_SessionType)
-    //        {
-    //        case EchoSessionData::UNKNOWN:
-    //            cout << "?";
-    //            break;
-    //        case EchoSessionData::ERR:
-    //            cout << "E";
-    //            break;
-    //        case EchoSessionData::IDLE:
-    //            // cout << "."; nop
-    //            break;
-    //        case EchoSessionData::LOBBY:
-    //            cout << "L";
-    //            break;
-    //        case EchoSessionData::ECHO_COMBAT:
-    //        case EchoSessionData::ECHO_ARENA:
-    //            for (auto p : sess.m_Players)
-    //            {
-    //                gauge_metric_t b_gauge(*this, m_strPingLabel, "ping rate, in milliseconds, reported by the echovr app",
-    //                    {
-    //                        {"matchtype", ((sess.m_SessionType == sess.ECHO_COMBAT) ? "Echo Combat" : "Echo Arena")},
-    //                        {"sessionid", sess.m_strSessionID },
-    //                        {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
-    //                        {"userid", std::to_string(p.m_llUserId)},
-    //                        {"playername", p.GetPlayerNameEscaped()},
-    //                        {"server", sess.m_strSource }
-    //                    });
-    //                b_gauge.Set(p.m_nPing);
-
-    //                gauge_t<double&> c_gauge(*this, m_strPacketLossLabel, "packet loss ratio reported by the echovr app",
-    //                    {
-    //                        {"matchtype", ((sess.m_SessionType == sess.ECHO_COMBAT) ? "Echo Combat" : "Echo Arena")},
-    //                        {"sessionid", sess.m_strSessionID },
-    //                        {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
-    //                        {"userid", std::to_string(p.m_llUserId)},
-    //                        {"playername", p.GetPlayerNameEscaped()},
-    //                        {"server", sess.m_strSource }
-    //                    });
-    //                c_gauge.Set(p.m_dPacketLossRatio);
-    //            }
-    //            cout << (char)((sess.m_SessionType == sess.ECHO_COMBAT) ? 'C' : 'A');
-
-    //            break;
-    //        default:
-    //            cout << "?";
-    //            break;
-    //        } // switch
-    //    }  // for each sessions     
-    //    // call the parent's serialize
-    //    Registry::serialize(out);
-    //}
 };
 // Enable ANSI escape codes on Windows console
 
