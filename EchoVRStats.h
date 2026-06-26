@@ -15,15 +15,38 @@ public:
     unsigned m_nPing;
     double m_dPacketLossRatio;
 
+
     std::string GetPlayerNameEscaped(void) const
     {
-        std::string str = m_strName;
-        for (size_t i = 0; i < str.length(); i++)
-            if (str[i] == ' ')
-                // Replace the single space character with the 2-character sequence "\\ "
-                str.replace(i++, 1, "\\ ");
+        std::string str;
+        str.reserve(m_strName.length() * 2);
+        for (char c : m_strName)
+        {
+            switch (c)
+            {
+            case '\\':
+                str += "\\\\";
+                break;
+            case '"':
+                str += "\\\"";
+                break;
+            case '\n':
+                str += "\\n";
+                break;
+            case ' ':
+            case ',':
+            case '=':
+                // InfluxDB line protocol field/tag escaping
+                str += '\\';
+                str += c;
+                break;
+            default:
+                str += c;
+                break;
+            }
+        }
         return str;
-    };
+    }
 
     // make a simple constructor with ALL the elements for use with emplace
     EchoPlayerData(std::string name,

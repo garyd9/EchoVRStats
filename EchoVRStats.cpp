@@ -37,24 +37,30 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::stri
 // used by ReadResponse
 int httpGet(const std::string& url, std::string& strResponse)
 {
-    CURL* curl = curl_easy_init();
+    static thread_local CURL* s_curl = curl_easy_init();
     long nStatusCode = 0;
+
 
     strResponse.clear();
 
-    if (curl)
+    if (s_curl)
     {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &strResponse);
-        CURLcode res = curl_easy_perform(curl);
+        curl_easy_reset(s_curl);
+        curl_easy_setopt(s_curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(s_curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(s_curl, CURLOPT_WRITEDATA, &strResponse);
+        CURLcode res = curl_easy_perform(s_curl);
 
         if (res != CURLE_OK)
         {
-            curl_easy_cleanup(curl);
+            curl_easy_cleanup(s_curl);
             throw std::runtime_error("HTTP GET failed with error " + std::to_string((int)res));
         }
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &nStatusCode);
+        curl_easy_getinfo(s_curl, CURLINFO_RESPONSE_CODE, &nStatusCode);
+    }
+    else
+    {
+        throw std::runtime_error("Unable to initialize curl");
     }
     return nStatusCode;
     
@@ -176,7 +182,7 @@ void FetchSessionData(std::list<std::string>& dataSources, std::list<EchoSession
     {
         EchoSessionData sess;
         ReadResponse(src, sess);
-        TODO: deal with session types of ERR and UNKNOWN
+//        TODO: deal with session types of ERR and UNKNOWN
         if (sess.m_SessionType != sess.IDLE)
             sessionData.push_back(sess);
     }
@@ -208,7 +214,7 @@ void RunCycle(std::list<std::string>& dataSources, std::string strInfluxDest = {
                     " " + std::to_string(sess.m_nTimestamp) +
                     "\n");
 
-                TODO:  add the m_strSource.  That will be either "file" or a server port number
+//                TODO:  add the m_strSource.  That will be either "file" or a server port number
             }
         }
         else if (sess.m_SessionType == sess.LOBBY)
@@ -304,7 +310,7 @@ public:
                             {"sessionid", sess.m_strSessionID },
                             {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
                             {"userid", std::to_string(p.m_llUserId)},
-                            {"playername", p.m_strName },
+                            {"playername", p.GetPlayerNameEscaped()},
                             {"server", sess.m_strSource }
                         });
                     b_gauge.Set(p.m_nPing);
