@@ -30,8 +30,11 @@ include(FetchContent)
 FetchContent_Declare(
   prometheus-cpp-lite
   GIT_REPOSITORY https://github.com/biaks/prometheus-cpp-lite.git
-  GIT_TAG        "master"
+#  GIT_TAG        "master"
+#  force the oldest commit that will compile
+  GIT_TAG        1523303 
 )
+
 FetchContent_MakeAvailable(prometheus-cpp-lite)
 
 target_link_libraries(EchoVRStats PRIVATE CURL::libcurl prometheus-cpp-lite cxxopts::cxxopts)

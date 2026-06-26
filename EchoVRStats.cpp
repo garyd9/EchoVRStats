@@ -17,7 +17,6 @@
 #include <curl/curl.h>
 #include "curl/easy.h"
 #include <nlohmann/json.hpp>
-#include "nlohmann/json_fwd.hpp"
 #include <prometheus/prometheus.h>
 #include <cxxopts.hpp>
 
@@ -321,7 +320,7 @@ public:
                             {"sessionid", sess.m_strSessionID },
                             {"isprivate", (sess.m_bIsPrivate ? "true" : "false")},
                             {"userid", std::to_string(p.m_llUserId)},
-                            {"playername", p.m_strName },
+                            {"playername", p.GetPlayerNameEscaped()},
                             {"server", sess.m_strSource }
                         });
                     c_gauge.Set(p.m_dPacketLossRatio);
