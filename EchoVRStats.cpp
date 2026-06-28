@@ -193,7 +193,7 @@ public:
 
         for (auto& sess : sessions)
         {
-            cout << "\r\033[KPort " << sess.m_strSource << ": " << sess.GetStatusString() << "\n";
+            cout << "\r\033[KPort " << sess.m_strSource << (sess.m_bIsPrivate ? ": Private " : ": ") << sess.GetStatusString() << "\n";
         }
         s_lastLineCount = 2 + (int)sessions.size();
         cout << flush;
